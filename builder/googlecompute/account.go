@@ -3,50 +3,44 @@ package googlecompute
 import (
 	"encoding/json"
 	"fmt"
+	"golang.org/x/oauth2/google"
 	"io/ioutil"
 	"os"
 	"strings"
 )
 
-// accountFile represents the structure of the account file JSON file.
-type AccountFile struct {
-	PrivateKeyId string `json:"private_key_id"`
-	PrivateKey   string `json:"private_key"`
-	ClientEmail  string `json:"client_email"`
-	ClientId     string `json:"client_id"`
-}
+var ExporterScopes = []string{
+	"https://www.googleapis.com/auth/compute",
+	"https://www.googleapis.com/auth/devstorage.full_control",
+	"https://www.googleapis.com/auth/userinfo.email"}
 
-func parseJSON(result interface{}, text string) error {
-	r := strings.NewReader(text)
-	dec := json.NewDecoder(r)
-	return dec.Decode(result)
-}
+var DriverScopes = []string{"https://www.googleapis.com/auth/compute",
+	"https://www.googleapis.com/auth/devstorage.full_control"}
 
-func ProcessAccountFile(account_file *AccountFile, text string) error {
+func ProcessAccountFile(scopes []string, text string) (*jwt.Config, error) {
 	// Assume text is a JSON string
-	if err := parseJSON(account_file, text); err != nil {
+	if len(scopes) == 0 {
+		// Default to driver scopes (defined in driver_gce)
+		scopes = DriverScopes
+	}
+	conf, err := google.JWTConfigFromJSON([]byte(text), scopes...)
+	if err != nil {
 		// If text was not JSON, assume it is a file path instead
 		if _, err := os.Stat(text); os.IsNotExist(err) {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"account_file path does not exist: %s",
 				text)
 		}
-
-		b, err := ioutil.ReadFile(text)
+		data, err := ioutil.ReadFile(text)
 		if err != nil {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"Error reading account_file from path '%s': %s",
 				text, err)
 		}
-
-		contents := string(b)
-
-		if err := parseJSON(account_file, contents); err != nil {
-			return fmt.Errorf(
-				"Error parsing account file '%s': %s",
-				contents, err)
+		conf, err := google.JWTConfigFromJSON(data, "https://www.googleapis.com/auth/bigquery")
+		if err != nil {
+			return nil, fmt.Errorf("Error parsing account_file: %s", err)
 		}
 	}
-
-	return nil
+	return conf, nil
 }
