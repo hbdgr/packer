@@ -1,29 +1,16 @@
 package googlecompute
 
 import (
-	"encoding/json"
 	"fmt"
 	"golang.org/x/oauth2/google"
+	"golang.org/x/oauth2/jwt"
 	"io/ioutil"
 	"os"
-	"strings"
 )
 
-var ExporterScopes = []string{
-	"https://www.googleapis.com/auth/compute",
-	"https://www.googleapis.com/auth/devstorage.full_control",
-	"https://www.googleapis.com/auth/userinfo.email"}
-
-var DriverScopes = []string{"https://www.googleapis.com/auth/compute",
-	"https://www.googleapis.com/auth/devstorage.full_control"}
-
-func ProcessAccountFile(scopes []string, text string) (*jwt.Config, error) {
+func ProcessAccountFile(text string) (*jwt.Config, error) {
 	// Assume text is a JSON string
-	if len(scopes) == 0 {
-		// Default to driver scopes (defined in driver_gce)
-		scopes = DriverScopes
-	}
-	conf, err := google.JWTConfigFromJSON([]byte(text), scopes...)
+	conf, err := google.JWTConfigFromJSON([]byte(text), DriverScopes...)
 	if err != nil {
 		// If text was not JSON, assume it is a file path instead
 		if _, err := os.Stat(text); os.IsNotExist(err) {
@@ -37,7 +24,7 @@ func ProcessAccountFile(scopes []string, text string) (*jwt.Config, error) {
 				"Error reading account_file from path '%s': %s",
 				text, err)
 		}
-		conf, err := google.JWTConfigFromJSON(data, "https://www.googleapis.com/auth/bigquery")
+		conf, err = google.JWTConfigFromJSON(data, "https://www.googleapis.com/auth/bigquery")
 		if err != nil {
 			return nil, fmt.Errorf("Error parsing account_file: %s", err)
 		}

@@ -210,7 +210,7 @@ func NewConfig(raws ...interface{}) (*Config, []string, error) {
 	}
 
 	if c.AccountFile != "" {
-		cfg, err := ProcessAccountFile(DriverScopes, c.AccountFile)
+		cfg, err := ProcessAccountFile(c.AccountFile)
 		if err != nil {
 			errs = packer.MultiErrorAppend(errs, err)
 		}
